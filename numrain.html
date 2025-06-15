@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rncyk-Number rain</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #000, #001a00, #000);
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            color: #0f0;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        #matrix-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .matrix-cell {
+            width: 1.2em;
+            height: 1.2em;
+            text-align: center;
+            font-size: 1.8vmin;
+            opacity: 0.7;
+            transition: all 0.3s;
+            position: relative;
+            text-shadow: 0 0 8px rgba(0, 255, 0, 0.8);
+        }
+
+        .matrix-cell.fade-out {
+            opacity: 0.1;
+        }
+
+        .matrix-cell.fade-in {
+            opacity: 0.9;
+        }
+
+        .matrix-cell.highlight {
+            color: #fff;
+            text-shadow: 0 0 15px #fff, 0 0 30px #0f0;
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        #back-button {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            z-index: 100;
+            background: rgba(10, 30, 10, 0.7);
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-family: 'Courier New', monospace;
+            text-decoration: none;
+            border-radius: 4px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.6);
+            transition: all 0.4s ease;
+            backdrop-filter: blur(5px);
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        #back-button:hover {
+            background: rgba(0, 80, 0, 0.9);
+            box-shadow: 0 0 25px #0f0;
+            transform: translateY(-5px) scale(1.05);
+        }
+
+        .title-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            z-index: 50;
+            text-align: center;
+        }
+
+        .main-title {
+            font-size: 6vmax;
+            letter-spacing: 15px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            animation: titleGlow 3s infinite alternate;
+            text-shadow: 0 0 20px #0f0, 0 0 40px #0f0;
+        }
+
+        .sub-title {
+            font-size: 2vmax;
+            letter-spacing: 5px;
+            opacity: 0.8;
+            max-width: 80%;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        @keyframes titleGlow {
+            0% {
+                opacity: 0.8;
+                transform: translateY(-10px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(10px);
+            }
+        }
+
+        .copyright {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            font-size: 14px;
+            opacity: 0.5;
+            z-index: 100;
+        }
+
+        @media (max-width: 768px) {
+            .main-title {
+                font-size: 12vw;
+                letter-spacing: 8px;
+            }
+
+            .sub-title {
+                font-size: 4vw;
+            }
+
+            #back-button {
+                padding: 12px 24px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="matrix-container"></div>
+
+    <a href="https://rncyk.org/rknotsame.html" id="back-button">Back to home</a>
+
+    <script>
+
+        const CHARS = "01";
+        const UPDATE_INTERVAL = 80;
+        const NEW_CHAR_PROBABILITY = 0.04;
+        const FADE_START_AGE = 30;
+        const MAX_AGE = 50;
+
+        let matrix = [];
+        let animationId = null;
+        let lastUpdateTime = 0;
+        let cols, rows;
+
+        function initMatrix() {
+            const container = document.getElementById('matrix-container');
+            container.innerHTML = '';
+
+            const cellWidth = parseFloat(getComputedStyle(document.documentElement).fontSize) * 1.2;
+            const cellHeight = cellWidth;
+
+            cols = Math.ceil(window.innerWidth / cellWidth);
+            rows = Math.ceil(window.innerHeight / cellHeight);
+
+            matrix = [];
+
+            for (let row = 0; row < rows; row++) {
+                const rowData = [];
+
+                for (let col = 0; col < cols; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'matrix-cell';
+                    cell.textContent = ' ';
+                    container.appendChild(cell);
+
+                    rowData.push({
+                        element: cell,
+                        char: ' ',
+                        age: 0,
+                        fading: false
+                    });
+                }
+
+                matrix.push(rowData);
+            }
+        }
+
+        function updateMatrix(timestamp) {
+            if (timestamp - lastUpdateTime < UPDATE_INTERVAL) {
+                animationId = requestAnimationFrame(updateMatrix);
+                return;
+            }
+
+            lastUpdateTime = timestamp;
+
+            for (let col = 0; col < cols; col++) {
+                if (Math.random() < NEW_CHAR_PROBABILITY) {
+                    const newChar = CHARS.charAt(Math.floor(Math.random() * CHARS.length));
+                    matrix[0][col].char = newChar;
+                    matrix[0][col].element.textContent = newChar;
+                    matrix[0][col].age = 0;
+                    matrix[0][col].fading = false;
+                    matrix[0][col].element.classList.remove('fade-out');
+                    matrix[0][col].element.classList.add('fade-in');
+
+                    if (Math.random() > 0.8) {
+                        matrix[0][col].element.classList.add('highlight');
+                    } else {
+                        matrix[0][col].element.classList.remove('highlight');
+                    }
+                }
+            }
+
+            for (let row = rows - 1; row > 0; row--) {
+                for (let col = 0; col < cols; col++) {
+                    matrix[row][col].char = matrix[row-1][col].char;
+                    matrix[row][col].element.textContent = matrix[row-1][col].char;
+
+                    if (matrix[row][col].char !== ' ') {
+                        matrix[row][col].age = matrix[row-1][col].age + 1;
+                        matrix[row][col].fading = matrix[row-1][col].fading;
+
+                        if (matrix[row][col].age > FADE_START_AGE && !matrix[row][col].fading) {
+                            matrix[row][col].fading = true;
+                            matrix[row][col].element.classList.add('fade-out');
+                        }
+
+                        if (matrix[row][col].element.classList.contains('highlight')) {
+                            matrix[row][col].element.classList.remove('highlight');
+                        }
+                    } else {
+                        matrix[row][col].age = 0;
+                        matrix[row][col].fading = false;
+                        matrix[row][col].element.classList.remove('fade-out');
+                        matrix[row][col].element.classList.remove('highlight');
+                    }
+                }
+            }
+
+            for (let col = 0; col < cols; col++) {
+                matrix[0][col].char = ' ';
+                matrix[0][col].element.textContent = ' ';
+                matrix[0][col].age = 0;
+                matrix[0][col].fading = false;
+                matrix[0][col].element.classList.remove('fade-out');
+                matrix[0][col].element.classList.remove('highlight');
+            }
+
+            animationId = requestAnimationFrame(updateMatrix);
+        }
+
+        function startAnimation() {
+            if (!animationId) {
+                lastUpdateTime = performance.now();
+                animationId = requestAnimationFrame(updateMatrix);
+            }
+        }
+
+        function handleResize() {
+            initMatrix();
+            startAnimation();
+        }
+
+        function addRandomFlashes() {
+            setInterval(() => {
+                for (let i = 0; i < 10; i++) {
+                    const row = Math.floor(Math.random() * rows);
+                    const col = Math.floor(Math.random() * cols);
+
+                    if (matrix[row] && matrix[row][col] && matrix[row][col].char !== ' ') {
+                        matrix[row][col].element.classList.add('highlight');
+
+                        setTimeout(() => {
+                            if (matrix[row] && matrix[row][col]) {
+                                matrix[row][col].element.classList.remove('highlight');
+                            }
+                        }, 300);
+                    }
+                }
+            }, 1000);
+        }
+
+        window.addEventListener('load', () => {
+            initMatrix();
+            startAnimation();
+            addRandomFlashes();
+        });
+
+        window.addEventListener('resize', handleResize);
+    </script>
+</body>
+</html>

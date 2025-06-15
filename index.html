@@ -13,15 +13,30 @@
             justify-content: center;
             align-items: center;
             text-align: center;
+            position: relative;
         }
         h1 {
             margin: 10px 0;
             color: #FFFFFF;
+        }
+        .bottom-left-link {
+            position: absolute;
+            left: 20px;
+            bottom: 20px;
+            color: #FFFFFF;
+            text-decoration: none;
+            font-size: 18px;
+            transition: all 0.3s ease;
+        }
+        .bottom-left-link:hover {
+            text-decoration: underline;
+            transform: translateY(-2px);
         }
     </style>
 </head>
 <body>
     <h1>We are still in development</h1>
     <h1>email: 34@rncyk.org</h1>
+    <a class="bottom-left-link" href="https://rncyk.org/rknotsame.html">different?</a>
 </body>
 </html>

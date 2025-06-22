@@ -1,2 +1,6 @@
 User-agent: Baiduspider
 Disallow: /
+
+User-agent: *
+Disallow: /game/
+Disallow: /visual/
